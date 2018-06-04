@@ -119,7 +119,7 @@ resource "aws_cloudfront_distribution" "site_with_auth" {
 
     lambda_function_association {
       event_type = "viewer-request"
-      lambda_arn = "${aws_lambda_function.site_auth.qualified_arn}"
+      lambda_arn = "${aws_lambda_function.site_auth_lambda.qualified_arn}"
     }
   }
 
@@ -229,9 +229,9 @@ resource "aws_iam_role" "site_auth" {
 EOF
 }
 
-data "template_file" "site_auth" {
+data "template_file" "site_auth_function" {
   count    = "${local.have_basic_auth ? 1 : 0}"
-  template = "${file("${path.module}/basic_auth_function.js.template")}"
+  template = "${file("${path.module}/basic_auth_function.js")}"
 
   vars {
     user     = "${var.basic_auth_user}"
@@ -239,26 +239,24 @@ data "template_file" "site_auth" {
   }
 }
 
-resource "local_file" "site_auth" {
-  count    = "${local.have_basic_auth ? 1 : 0}"
-  content  = "${data.template_file.site_auth.rendered}"
-  filename = "${path.module}/basic_auth_function.js"
-}
-
-data "archive_file" "site_auth" {
+data "archive_file" "site_auth_package" {
   count       = "${local.have_basic_auth ? 1 : 0}"
   type        = "zip"
-  source_file = "${path.module}/basic_auth_function.js"
   output_path = "${path.module}/basic_auth_function.zip"
+
+  source {
+    content  = "${data.template_file.site_auth_function.rendered}"
+    filename = "basic_auth_function.js"
+  }
 }
 
-resource "aws_lambda_function" "site_auth" {
+resource "aws_lambda_function" "site_auth_lambda" {
   count            = "${local.have_basic_auth ? 1 : 0}"
-  filename         = "${data.archive_file.site_auth.output_path}"
+  filename         = "${data.archive_file.site_auth_package.output_path}"
   function_name    = "${var.name}-basic-auth"
   handler          = "basic_auth_function.handler"
   publish          = true
   role             = "${aws_iam_role.site_auth.arn}"
   runtime          = "nodejs8.10"
-  source_code_hash = "${base64sha256(file(data.archive_file.site_auth.output_path))}"
+  source_code_hash = "${data.archive_file.site_auth_package.output_base64sha256}"
 }
