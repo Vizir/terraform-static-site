@@ -201,7 +201,7 @@ resource "aws_route53_record" "site" {
   name    = "${var.domain}"
   type    = "CNAME"
   ttl     = "300"
-  records = "${concat(aws_cloudfront_distribution.site.*.domain_name, aws_cloudfront_distribution.site_with_auth.*.domain_name)}"
+  records = ["${concat(aws_cloudfront_distribution.site.*.domain_name, aws_cloudfront_distribution.site_with_auth.*.domain_name)}"]
 }
 
 # Basic auth lambda
