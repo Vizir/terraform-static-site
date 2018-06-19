@@ -199,9 +199,13 @@ resource "aws_route53_record" "site" {
   count   = "${var.route53_zone_id == "" ? 0 : 1}"
   zone_id = "${var.route53_zone_id}"
   name    = "${var.domain}"
-  type    = "CNAME"
-  ttl     = "300"
-  records = ["${concat(aws_cloudfront_distribution.site.*.domain_name, aws_cloudfront_distribution.site_with_auth.*.domain_name)}"]
+  type    = "A"
+
+  alias {
+    name                   = "${element(concat(aws_cloudfront_distribution.site.*.domain_name, aws_cloudfront_distribution.site_with_auth.*.domain_name), 0)}"
+    zone_id                = "${element(concat(aws_cloudfront_distribution.site.*.hosted_zone_id, aws_cloudfront_distribution.site_with_auth.*.hosted_zone_id), 0)}"
+    evaluate_target_health = false
+  }
 }
 
 # Basic auth lambda
