@@ -2,6 +2,11 @@
 
 module.exports.handler = async function (event, context) {
   const request = event.Records[0].cf.request;
+
+  if (request.uri === '/manifest.json') {
+    return request;
+  }
+
   const { headers } = request;
   const user = '${user}';
   const password = '${password}';
@@ -19,5 +24,5 @@ module.exports.handler = async function (event, context) {
     };
   }
 
-  return request
+  return request;
 };
